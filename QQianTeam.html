@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Q芊 - 轻世界VR射箭天团</title>
+    <style>
+        /* 全局设置 */
+        :root {
+            --neon-pink: #ff00de;
+            --neon-purple: #bd00ff;
+            --dark-bg: #0f0518;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --text-glow: 0 0 10px rgba(255, 0, 222, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* 移除手机点击高亮 */
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景 */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 20%, rgba(189, 0, 255, 0.2), transparent 40%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 0, 222, 0.2), transparent 40%);
+            z-index: -1;
+        }
+
+        /* 导航栏 */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            backdrop-filter: blur(10px);
+            position: fixed;
+            width: 100%;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 0, 222, 0.2);
+            transition: 0.3s;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(to right, var(--neon-pink), var(--neon-purple));
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(189, 0, 255, 0.5);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 英雄区域 */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            padding: 0 20px;
+        }
+
+        .hero h1 {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+            animation: glow 2s infinite alternate;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.5rem;
+            color: #e0e0e0;
+            margin-bottom: 40px;
+            max-width: 600px;
+        }
+
+        .hero .highlight {
+            color: var(--neon-pink);
+            font-weight: bold;
+        }
+
+        /* 装饰圆环 */
+        .target-ring {
+            position: absolute;
+            border: 2px solid var(--neon-purple);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .r1 { width: 300px; height: 300px; animation: pulse 3s infinite; }
+        .r2 { width: 500px; height: 500px; animation: pulse 3s infinite 0.5s; }
+        .r3 { width: 700px; height: 700px; animation: pulse 3s infinite 1s; }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border: 2px solid var(--neon-pink);
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: 0.3s;
+            text-decoration: none;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            display: inline-block;
+        }
+
+        /* 榜单展示区 */
+        .ranking-section {
+            padding: 100px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 0 40px rgba(189, 0, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .section-title span {
+            border-bottom: 3px solid var(--neon-pink);
+        }
+
+        /* 滚动表格容器 */
+        .table-scroll-wrapper {
+            width: 100%;
+            max-height: 400px; 
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 2px;
+            -webkit-overflow-scrolling: touch; /* iOS顺滑滚动 */
+        }
+        
+        /* 滚动条美化 */
+        .table-scroll-wrapper::-webkit-scrollbar { width: 6px; }
+        .table-scroll-wrapper::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .table-scroll-wrapper::-webkit-scrollbar-thumb { background: var(--neon-pink); border-radius: 3px; }
+
+        .leaderboard {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard th {
+            text-align: left;
+            padding: 15px;
+            color: var(--neon-purple);
+            font-size: 1.2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            background: #150a1f; /* 深色背景防止透明重叠 */
+            z-index: 10;
+        }
+
+        .leaderboard td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 1.1rem;
+            vertical-align: middle;
+        }
+
+        .rank-num {
+            font-weight: bold;
+            font-size: 1.4rem;
+            font-style: italic;
+            white-space: nowrap;
+        }
+
+        .rank-1 { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+        .rank-2 { color: #c0c0c0; }
+        .rank-3 { color: #cd7f32; }
+
+        .member-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap; /* 允许换行 */
+        }
+
+        .badge {
+            background: linear-gradient(45deg, var(--neon-purple), var(--neon-pink));
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        /* 管理员控制 */
+        #admin-controls {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+
+        .add-btn {
+            background: transparent;
+            border: 1px solid var(--neon-purple);
+            color: var(--neon-purple);
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 30px;
+        }
+
+        /* 保存按钮 */
+        #save-btn-container {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 200;
+        }
+
+        .save-btn {
+            background: #00ff00;
+            border: none;
+            color: black;
+            font-weight: bold;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            border-radius: 50px; /* 圆润一点适合手机 */
+            font-size: 1rem;
+            padding: 12px 25px;
+            clip-path: none; /* 取消多边形，防止点击区域奇怪 */
+        }
+
+        .editable-active {
+            border: 1px dashed var(--neon-pink) !important;
+            background: rgba(255, 0, 222, 0.1);
+            outline: none;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            background: rgba(0,0,0,0.5);
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        /* ======= 移动端专属优化 ======= */
+        @media (max-width: 768px) {
+            nav { padding: 15px 20px; }
+            .logo { font-size: 1.5rem; }
+            
+            .hero h1 { font-size: 2.8rem; letter-spacing: 2px; }
+            .hero p { font-size: 1rem; padding: 0 10px; }
+            
+            .ranking-section { padding: 60px 10px; } /* 减少上下留白 */
+            
+            .glass-card { 
+                padding: 20px 10px; 
+                width: 100%;
+            }
+
+            .section-title { font-size: 1.8rem; margin-bottom: 20px; }
+
+            /* 表格紧凑化 */
+            .leaderboard th { padding: 10px 5px; font-size: 0.9rem; }
+            .leaderboard td { padding: 12px 5px; font-size: 0.9rem; }
+            
+            .rank-num { font-size: 1.1rem; } /* 排名数字变小 */
+            
+            /* 手机端名字和称号上下排列，节省横向空间 */
+            .member-name {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .badge {
+                font-size: 0.6rem;
+                padding: 1px 4px;
+            }
+
+            /* 滚动区域高度适应手机屏幕 */
+            .table-scroll-wrapper {
+                max-height: 50vh; 
+            }
+
+            /* 保存按钮位置调整 */
+            #save-btn-container {
+                bottom: 20px;
+                right: 20px;
+            }
+            .save-btn {
+                font-size: 0.9rem;
+                padding: 10px 20px;
+            }
+            
+            .btn {
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 10px rgba(255, 0, 222, 0.5); }
+            to { text-shadow: 0 0 25px rgba(255, 0, 222, 1), 0 0 10px white; }
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.1; }
+            50% { transform: translate(-50%, -50%) scale(1); opacity: 0.2; } /* 降低手机端不透明度干扰 */
+            100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 背景 -->
+    <div class="bg-gradient"></div>
+
+    <!-- 导航 -->
+    <nav>
+        <div class="logo" onclick="adminLogin()" title="点击登录编辑">Q芊</div>
+        <div style="color: white; font-weight: bold; font-size: 0.9rem;">轻世界VR</div>
+    </nav>
+
+    <!-- 主视觉区域 -->
+    <section class="hero">
+        <div class="target-ring r1"></div>
+        <div class="target-ring r2"></div>
+        <div class="target-ring r3"></div>
+
+        <h1>箭无虚发</h1>
+        <p>在 <span class="highlight">轻世界VR</span>，如果你看到粉紫色的箭羽<br>那是我们又一次刷新纪录的证明。</p>
+        <a href="#ranking" class="btn">查看战绩</a>
+    </section>
+
+    <!-- 排行榜区域 -->
+    <section id="ranking" class="ranking-section">
+        <div class="glass-card">
+            <h2 class="section-title"><span>统治榜单</span></h2>
+            <p style="text-align: center; margin-bottom: 20px; color: #aaa; font-size: 0.9rem;">"前几名？那是Q芊的内战现场。"</p>
+            
+            <div class="table-scroll-wrapper">
+                <table class="leaderboard" id="scoreTable">
+                    <thead>
+                        <tr>
+                            <th width="15%">排名</th>
+                            <th width="45%">ID</th>
+                            <th width="40%">分数/称号</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="rank-num rank-1">NO.1</td>
+                            <td class="editable-content" contenteditable="false">
+                                <div class="member-name">
+                                    <span class="badge">会长</span>
+                                    <span>Q芊·芊芊丝雨</span>
+                                </div>
+                            </td>
+                            <td class="editable-content" contenteditable="false">72368 (神射手)</td>
+                        </tr>
+                        <tr>
+                            <td class="rank-num rank-2">NO.2</td>
+                            <td class="editable-content" contenteditable="false">
+                                <div class="member-name">
+                                    <span>Q芊·思辰</span>
+                                </div>
+                            </td>
+                            <td class="editable-content" contenteditable="false">67696 (百步穿杨)</td>
+                        </tr>
+                        <tr>
+                            <td class="rank-num rank-3">NO.3</td>
+                            <td class="editable-content" contenteditable="false">
+                                <div class="member-name">
+                                    <span>Q芊·小木子</span>
+                                </div>
+                            </td>
+                            <td class="editable-content" contenteditable="false">66??? (无情猎手)</td>
+                        </tr>
+                        <tr>
+                            <td class="rank-num">NO.4</td>
+                            <td class="editable-content" contenteditable="false">
+                                <div class="member-name">
+                                    <span>Q芊·凯沉</span>
+                                </div>
+                            </td>
+                            <td class="editable-content" contenteditable="false">65779 (绝对命中)</td>
+                        </tr>
+                        <tr>
+                            <td class="rank-num">NO.5</td>
+                            <td class="editable-content" contenteditable="false">
+                                <div class="member-name">
+                                    <span>Q芊·洛白</span>
+                                </div>
+                            </td>
+                            <td class="editable-content" contenteditable="false">58401 (风行者)</td>
+                        </tr>
+                    <tr>
+                <td class="rank-num">NO.6</td>
+                <td class="editable-content" contenteditable="false">
+                    <div class="member-name">
+                        <span>Q芊·苏森瑶</span>
+                    </div>
+                </td>
+                <td class="editable-content" contenteditable="false">57230</td>
+            </tr><tr>
+                <td class="rank-num">NO.7</td>
+                <td class="editable-content" contenteditable="false">
+                    <div class="member-name">
+                        <span>Q芊·刘刘（编外）</span>
+                    </div>
+                </td>
+                <td class="editable-content" contenteditable="false">53755</td>
+            </tr><tr>
+                <td class="rank-num">NO.8</td>
+                <td class="editable-content" contenteditable="false">
+                    <div class="member-name">
+                        <span>Q芊·yuanchen</span>
+                    </div>
+                </td>
+                <td class="editable-content" contenteditable="false">52145</td>
+            </tr><tr>
+                <td class="rank-num">NO.9</td>
+                <td class="editable-content" contenteditable="false">
+                    <div class="member-name">
+                        <span>Q芊·听雨</span>
+                    </div>
+                </td>
+                <td class="editable-content" contenteditable="false">46053</td>
+            </tr><tr>
+                <td class="rank-num">NO.10</td>
+                <td class="editable-content" contenteditable="false">
+                    <div class="member-name">
+                        <span>Q芊·思星</span>
+                    </div>
+                </td>
+                <td class="editable-content" contenteditable="false">41903</td>
+            </tr><tr>
+                <td class="rank-num">NO.11</td>
+                <td class="editable-content" contenteditable="false">
+                    <div class="member-name">
+                        <span>Q芊·R.I.P</span>
+                    </div>
+                </td>
+                <td class="editable-content" contenteditable="false">35076</td>
+            </tr></tbody>
+                </table>
+            </div>
+
+            <!-- 管理员控制区 -->
+            <div id="admin-controls" style="display: none;">
+                <button onclick="addNewRow()" class="add-btn">➕ 添加排名</button>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center;">
+                <a href="#" class="btn" style="font-size: 1rem; padding: 10px 30px;">加入Q芊</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 保存按钮 -->
+    <div id="save-btn-container" style="display: none;">
+        <button onclick="saveChanges()" class="save-btn">💾 保存修改并下载文件</button>
+    </div>
+
+    <!-- 页脚 -->
+    <footer>
+        <p>© 2026 Q芊 Organization.<br>Dominating Light World VR.</p>
+    </footer>
+
+    <!-- 功能脚本 -->
+    <script>
+        function adminLogin() {
+            const password = prompt("请输入组长密码以编辑战绩：");
+            
+            if (password === "Qqian520") {
+                alert("登录成功！\n手机端提示：\n1. 点击文字可直接修改。\n2. 若键盘挡住按钮，请收起键盘后再保存。");
+                enableEditMode();
+            } else if (password !== null) {
+                alert("密码错误，无权操作。");
+            }
+        }
+
+        function enableEditMode() {
+            const editableCells = document.querySelectorAll('.editable-content');
+            editableCells.forEach(cell => {
+                cell.contentEditable = "true";
+                cell.classList.add('editable-active');
+            });
+            document.getElementById('save-btn-container').style.display = 'block';
+            document.getElementById('admin-controls').style.display = 'block';
+        }
+
+        function addNewRow() {
+            const tbody = document.querySelector("#scoreTable tbody");
+            const currentCount = tbody.rows.length;
+            const newRank = currentCount + 1;
+
+            const newRow = document.createElement("tr");
+            newRow.innerHTML = `
+                <td class="rank-num">NO.${newRank}</td>
+                <td class="editable-content editable-active" contenteditable="true">
+                    <div class="member-name">
+                        <span>Q芊·新成员</span>
+                    </div>
+                </td>
+                <td class="editable-content editable-active" contenteditable="true">待定分数</td>
+            `;
+            tbody.appendChild(newRow);
+            
+            // 滚动到底部
+            const wrapper = document.querySelector('.table-scroll-wrapper');
+            wrapper.scrollTop = wrapper.scrollHeight;
+        }
+
+        function saveChanges() {
+            // 移除编辑状态
+            const editableCells = document.querySelectorAll('.editable-content');
+            editableCells.forEach(cell => {
+                cell.contentEditable = "false";
+                cell.classList.remove('editable-active');
+            });
+            document.getElementById('save-btn-container').style.display = 'none';
+            document.getElementById('admin-controls').style.display = 'none';
+
+            // 生成文件
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], {type: "text/html"});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            
+            const date = new Date();
+            const timeStr = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate() + "_" + date.getHours() + date.getMinutes();
+            a.download = `Q芊主页_v${timeStr}.html`;
+            
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            alert("文件已生成！请覆盖原文件。");
+            enableEditMode();
+        }
+    </script>
+
+
+</body></html>
